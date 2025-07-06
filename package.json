@@ -1,0 +1,32 @@
+{
+  "name": "flow-studio-monorepo",
+  "version": "0.0.2",
+  "description": "A monorepo for BPMN Documentation Panel with examples and packages",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "format-and-lint": "biome check .",
+    "format-and-lint:fix": "biome check . --write",
+    "test": "turbo run test",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "knip": "knip",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.6",
+    "@changesets/cli": "^2.29.5",
+    "@types/node": "catalog:",
+    "knip": "^5.61.3",
+    "turbo": "^2.5.4",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.5.1",
+  "engines": {
+    "node": ">=16.0.0",
+    "pnpm": ">=7.0.0"
+  }
+}
