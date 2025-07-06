@@ -7,7 +7,6 @@ const config: KnipConfig = {
       project: ["src/**/*.ts"],
       ignore: ["src/typings/**/*"],
     },
-    "examples/*": {},
   },
   ignoreDependencies: ["playwright", "@vitest/coverage-v8"],
 };

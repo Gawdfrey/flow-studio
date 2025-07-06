@@ -22,18 +22,6 @@
     "type": "git",
     "url": "git+https://github.com/Gawdfrey/bpmn-js-markdown-documentation-panel.git"
   },
-  "keywords": [
-    "bpmn",
-    "camunda",
-    "modeler",
-    "plugin",
-    "documentation",
-    "markdown",
-    "process-documentation",
-    "bpmn-documentation",
-    "workflow-documentation",
-    "business-process"
-  ],
   "author": "Rein Undheim",
   "license": "MIT",
   "packageManager": "pnpm@10.5.1",
@@ -54,6 +42,7 @@
     "dist"
   ],
   "dependencies": {
-    "marked": "^16.0.0"
+    "marked": "^16.0.0",
+    "ws": "^8.18.3"
   }
 }

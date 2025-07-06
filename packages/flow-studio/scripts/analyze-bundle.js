@@ -181,10 +181,6 @@ function checkThresholds(builds) {
 
 // Main execution
 const sondaDir = ".sonda";
-const esmAnalysis = analyzeBundle(
-  join(sondaDir, "bpmn-js-entry.json"),
-  "Browser (ESM)"
-);
 const cjsAnalysis = analyzeBundle(
   join(sondaDir, "camunda-modeler-entry.json"),
   "Camunda Modeler (CommonJS)"

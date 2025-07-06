@@ -1,0 +1,8 @@
+{
+  "basePath": "/Users/reinundheim/Documents/flow-studio/bpmn-files",
+  "bpmnFiles": {
+    "process-order": "order-process.bpmn",
+    "process-payment": "payment-process.bpmn",
+    "process-shipping": "shipping-process.bpmn"
+  }
+}

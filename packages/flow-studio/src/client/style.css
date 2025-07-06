@@ -1,0 +1,8 @@
+.plugin-store-modal table {
+  width: 100%;
+}
+
+.plugin-store-modal table td,
+.plugin-store-modal table th {
+  text-align: left;
+}
