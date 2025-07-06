@@ -4,9 +4,16 @@ import { join } from "node:path";
 import * as WebSocket from "ws";
 
 interface ConfigFile {
-  bpmnFiles: { [key: string]: string };
-  basePath?: string;
+  api?: { [key: string]: string };
+  processes: { [key: string]: string };
+  stateSchema?: string;
+  indexFile?: string;
+  views?: any;
+  metrics?: any;
 }
+
+// Store electronApp reference
+let electronApp: any = null;
 
 const operations = {
   getConfig: async (ws: WebSocket, data: any) => {
@@ -65,21 +72,32 @@ const operations = {
       const configContent = readFileSync(configPath, "utf8");
       const config: ConfigFile = JSON.parse(configContent);
 
-      const bpmnFilePath = config.bpmnFiles[bpmnKey];
-      if (!bpmnFilePath) {
+      if (!config.processes) {
         ws.send(
           JSON.stringify({
             type: "error",
             ref: data.ref,
-            message: `BPMN file key not found: ${bpmnKey}`,
+            message: "No processes found in config",
           })
         );
         return;
       }
 
-      const fullPath = config.basePath
-        ? join(config.basePath, bpmnFilePath)
-        : bpmnFilePath;
+      const bpmnFilePath = config.processes[bpmnKey];
+      if (!bpmnFilePath) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: `Process not found: ${bpmnKey}`,
+          })
+        );
+        return;
+      }
+
+      // Files are relative to config location
+      const configDir = require("path").dirname(configPath);
+      const fullPath = join(configDir, bpmnFilePath);
 
       if (!existsSync(fullPath)) {
         ws.send(
@@ -114,14 +132,111 @@ const operations = {
       );
     }
   },
+
+  openBpmnFile: async (ws: WebSocket, data: any) => {
+    try {
+      const { configPath, bpmnKey } = data;
+
+      if (!electronApp) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: "ElectronApp not available",
+          })
+        );
+        return;
+      }
+
+      if (!configPath || !bpmnKey) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: "configPath and bpmnKey are required",
+          })
+        );
+        return;
+      }
+
+      const configContent = readFileSync(configPath, "utf8");
+      const config: ConfigFile = JSON.parse(configContent);
+
+      if (!config.processes) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: "No processes found in config",
+          })
+        );
+        return;
+      }
+
+      const bpmnFilePath = config.processes[bpmnKey];
+      if (!bpmnFilePath) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: `Process not found: ${bpmnKey}`,
+          })
+        );
+        return;
+      }
+
+      // Files are relative to config location
+      const configDir = require("path").dirname(configPath);
+      const fullPath = join(configDir, bpmnFilePath);
+
+      if (!existsSync(fullPath)) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            ref: data.ref,
+            message: `BPMN file not found: ${fullPath}`,
+          })
+        );
+        return;
+      }
+
+      // Use electronApp.openFiles to open the BPMN file in a new tab
+      electronApp.openFiles([fullPath]);
+
+      ws.send(
+        JSON.stringify({
+          type: "response",
+          ref: data.ref,
+          data: {
+            success: true,
+            filePath: fullPath,
+            message: `Opened ${bpmnKey} in new tab`,
+          },
+        })
+      );
+    } catch (error) {
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          ref: data.ref,
+          message: `Error opening BPMN file: ${error}`,
+        })
+      );
+    }
+  },
 };
 
 let wss: WebSocket.WebSocketServer;
 
-export function initServer() {
+export function initServer(electronAppRef?: any) {
   if (wss) {
     // already initialized
     return;
+  }
+
+  // Store electronApp reference if provided
+  if (electronAppRef) {
+    electronApp = electronAppRef;
   }
 
   wss = new WebSocket.WebSocketServer({

@@ -6,3 +6,21 @@
 .plugin-store-modal table th {
   text-align: left;
 }
+
+/* Force show Flow Studio modal - override parent display: none */
+.flow-studio-modal {
+  display: block !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: white !important;
+  padding: 20px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  z-index: 10000 !important;
+  max-width: 500px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+}

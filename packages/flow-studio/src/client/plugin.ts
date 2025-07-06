@@ -31,6 +31,7 @@ export class FlowStudioPlugin extends PureComponent<
     this.handleCallActivity = this.handleCallActivity.bind(this);
     this.loadConfig = this.loadConfig.bind(this);
     this.testOpenFile = this.testOpenFile.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
   }
 
   componentDidMount() {
@@ -57,8 +58,7 @@ export class FlowStudioPlugin extends PureComponent<
       }
     );
 
-    // Listen for call activity clicks
-    this.props.subscribe("element.click", this.handleCallActivity);
+    this.props.subscribe("element.dblclick", this.handleCallActivity);
 
     // retrieve plugin related information from the application configuration
     config
@@ -88,56 +88,26 @@ export class FlowStudioPlugin extends PureComponent<
 
       if (calledElement && this.state.config) {
         try {
-          const result = await client.getBpmnFile(
-            this.state.configPath,
-            calledElement
-          );
-
-          // Open the BPMN file in a new tab
-          // Try multiple possible action names
-          try {
-            this.props.triggerAction("create-tab", {
-              type: "bpmn",
-              name: calledElement,
-              xml: result.bpmnContent,
-            });
-          } catch (e1) {
-            try {
-              this.props.triggerAction("open-diagram", {
-                xml: result.bpmnContent,
-                name: calledElement,
-              });
-            } catch (e2) {
-              try {
-                this.props.triggerAction("create-bpmn-diagram", {
-                  xml: result.bpmnContent,
-                  name: calledElement,
-                });
-              } catch (e3) {
-                console.error(
-                  "Failed to open BPMN file with all tried actions:",
-                  { e1, e2, e3 }
-                );
-                this.props.displayNotification({
-                  type: "error",
-                  title: "Error opening BPMN file",
-                  content: "Could not open BPMN file - no working action found",
-                  duration: 5000,
-                });
-                return;
-              }
-            }
-          }
+          await client.openBpmnFile(this.state.configPath, calledElement);
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
           this.props.displayNotification({
             type: "error",
-            title: "Error opening BPMN file",
-            content: `Could not open BPMN file for ${calledElement}: ${errorMessage}`,
+            title: "Error opening process",
+            content: `Could not open process "${calledElement}": ${errorMessage}`,
             duration: 5000,
           });
         }
+      } else if (element.type === "bpmn:CallActivity" && !calledElement) {
+        // Show helpful message for call activities without calledElement
+        this.props.displayNotification({
+          type: "warning",
+          title: "Call Activity Configuration",
+          content:
+            "This call activity doesn't have a 'Called Element' configured",
+          duration: 4000,
+        });
       }
     }
   }
@@ -146,55 +116,47 @@ export class FlowStudioPlugin extends PureComponent<
     if (!this.state.config) return;
 
     try {
-      const result = await client.getBpmnFile(this.state.configPath, bpmnKey);
+      const result = await client.openBpmnFile(this.state.configPath, bpmnKey);
 
-      // Try different action names to find what works
-      console.log("Available actions:", Object.keys(this.props));
-      console.log("Props:", this.props);
-      console.log("Attempting to open BPMN file:", bpmnKey, result);
+      console.log("Opening BPMN file:", bpmnKey, result);
 
-      // Try multiple possible action names
-      const actionsToTry = [
-        "newTab",
-        "new-tab", 
-        "createTab",
-        "create.tab",
-        "openFile",
-        "open-file",
-        "importXML",
-        "import-xml",
-        "new.bpmn-diagram",
-        "bpmn.create",
-        "diagram.new"
-      ];
-
-      let success = false;
-      for (const action of actionsToTry) {
-        try {
-          this.props.triggerAction(action, {
-            type: "bpmn",
-            name: bpmnKey,
-            xml: result.bpmnContent,
-          });
-          console.log(`Success with ${action}`);
-          success = true;
-          break;
-        } catch (error) {
-          console.log(`Failed with ${action}:`, error.message);
-        }
-      }
-
-      if (!success) {
-        console.error("Failed to open BPMN file with all tried actions");
-        this.props.displayNotification({
-          type: "error",
-          title: "Error opening BPMN file", 
-          content: "Could not open BPMN file - no working action found",
-          duration: 5000,
-        });
-      }
+      this.props.displayNotification({
+        type: "success",
+        title: "Opening BPMN file",
+        content: result.message,
+        duration: 3000,
+      });
     } catch (error) {
-      console.error("Error loading BPMN file:", error);
+      console.error("Error opening BPMN file:", error);
+      this.props.displayNotification({
+        type: "error",
+        title: "Error opening BPMN file",
+        content: "Could not open BPMN file",
+        duration: 5000,
+      });
+    }
+  }
+
+  async saveSettings(): Promise<void> {
+    try {
+      await this.props.config.setForPlugin("flowStudio", "config", {
+        configPath: this.state.configPath,
+      });
+
+      this.props.displayNotification({
+        type: "success",
+        title: "Settings Saved",
+        content: "Config path has been saved successfully",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      this.props.displayNotification({
+        type: "error",
+        title: "Error saving settings",
+        content: "Could not save settings",
+        duration: 5000,
+      });
     }
   }
 
@@ -218,66 +180,103 @@ export class FlowStudioPlugin extends PureComponent<
     return createElement(
       Fragment,
       null,
-      createElement(
-        "div",
-        {
-          style: {
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            background: "white",
-            padding: "20px",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-            zIndex: 1000,
+      this.state.configOpen &&
+        createElement(
+          "div",
+          {
+            className: "flow-studio-modal",
           },
-        },
-        createElement("h3", null, "Flow Studio Configuration"),
-        createElement("p", null, `Config Path: ${this.state.configPath}`),
-        this.state.error &&
-          createElement(
-            "p",
-            { style: { color: "red" } },
-            `Error: ${this.state.error}`
-          ),
-        this.state.config &&
+          createElement("h3", null, "Flow Studio Configuration"),
           createElement(
             "div",
             null,
-            createElement("p", null, "Available BPMN Files:"),
-            createElement(
-              "ul",
-              null,
-              ...Object.keys(this.state.config.bpmnFiles).map((key) =>
-                createElement(
-                  "li",
-                  { key },
-                  `${key}: ${this.state.config!.bpmnFiles[key]}`
-                )
-              )
-            )
+            createElement("label", null, "Config File Path:"),
+            createElement("input", {
+              type: "text",
+              value: this.state.configPath,
+              onChange: (e: any) =>
+                this.setState({ configPath: e.target.value }),
+              style: {
+                width: "100%",
+                padding: "8px",
+                marginTop: "5px",
+                marginBottom: "10px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+              },
+              placeholder: "Enter path to config.json file",
+            })
           ),
-        createElement(
-          "button",
-          { onClick: () => this.handleConfigClosed(null) },
-          "Close"
-        ),
-        createElement(
-          "button",
-          { onClick: this.loadConfig, style: { marginLeft: "10px" } },
-          "Reload"
-        ),
-        createElement(
-          "button",
-          {
-            onClick: () => this.testOpenFile("process-order"),
-            style: { marginLeft: "10px" },
-          },
-          "Test Open Order Process"
+          this.state.error &&
+            createElement(
+              "p",
+              { style: { color: "red" } },
+              `Error: ${this.state.error}`
+            ),
+          this.state.config &&
+            createElement(
+              "div",
+              null,
+              createElement("p", null, "Available Processes:"),
+              this.state.config.processes &&
+                createElement(
+                  "ul",
+                  null,
+                  ...Object.keys(this.state.config.processes).map((key) =>
+                    createElement(
+                      "li",
+                      { key },
+                      `${key}: ${this.state.config!.processes![key]}`
+                    )
+                  )
+                ),
+              !this.state.config.processes &&
+                createElement(
+                  "p",
+                  { style: { color: "orange" } },
+                  "No processes found in config file"
+                )
+            ),
+          createElement(
+            "div",
+            {
+              style: {
+                marginTop: "20px",
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              },
+            },
+            createElement(
+              "button",
+              { onClick: this.loadConfig },
+              "Load Config"
+            ),
+            createElement(
+              "button",
+              { onClick: () => this.saveSettings() },
+              "Save Settings"
+            ),
+            this.state.config?.processes &&
+              createElement(
+                "button",
+                {
+                  onClick: () => {
+                    const firstProcess = Object.keys(
+                      this.state.config!.processes!
+                    )[0];
+                    this.testOpenFile(firstProcess);
+                  },
+                },
+                "Test Open First Process"
+              ),
+            createElement(
+              "button",
+              { onClick: () => this.handleConfigClosed(null) },
+              "Close"
+            )
+          )
         )
-      )
     );
   }
 }

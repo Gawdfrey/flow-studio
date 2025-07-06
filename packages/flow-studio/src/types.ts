@@ -1,6 +1,10 @@
 export interface ConfigFile {
-  bpmnFiles: { [key: string]: string };
-  basePath?: string;
+  api?: { [key: string]: string };
+  processes: { [key: string]: string };
+  stateSchema?: string;
+  indexFile?: string;
+  views?: any;
+  metrics?: any;
 }
 
 export interface BpmnFileResponse {

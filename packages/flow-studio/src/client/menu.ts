@@ -6,7 +6,7 @@ export default (electronApp: any) => [
     accelerator: "CommandOrControl+1",
     enabled: () => true,
     action: () => {
-      initServer();
+      initServer(electronApp);
       electronApp.mainWindow.webContents.send("plugin:flow-studio:open", {
         port: 1337,
       });

@@ -124,3 +124,40 @@ export async function getBpmnFile(
 
   return promise;
 }
+
+export async function openBpmnFile(
+  configPath: string,
+  bpmnKey: string
+): Promise<{ success: boolean; filePath: string; message: string }> {
+  if (!wsPromise) {
+    throw new Error("WebSocket not initialized");
+  }
+  await wsPromise;
+
+  if (!ws) {
+    throw new Error("WebSocket connection not available");
+  }
+
+  const opId = `open-${Date.now()}`;
+
+  const promise = new Promise<{ success: boolean; filePath: string; message: string }>((resolve, reject) => {
+    awaitResponses.push({
+      ref: opId,
+      time: Date.now(),
+      resolve,
+      reject,
+    });
+  });
+
+  ws.send(
+    JSON.stringify({
+      type: "request",
+      operation: "openBpmnFile",
+      ref: opId,
+      configPath,
+      bpmnKey,
+    })
+  );
+
+  return promise;
+}
