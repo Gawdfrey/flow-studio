@@ -31,7 +31,6 @@ export class FlowStudioPlugin extends PureComponent<
     this.handleConfigClosed = this.handleConfigClosed.bind(this);
     this.handleCallActivity = this.handleCallActivity.bind(this);
     this.loadConfig = this.loadConfig.bind(this);
-    this.testOpenFile = this.testOpenFile.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.setupElementEventHandlers = this.setupElementEventHandlers.bind(this);
   }
@@ -132,31 +131,6 @@ export class FlowStudioPlugin extends PureComponent<
           duration: 5000,
         });
       }
-    }
-  }
-
-  async testOpenFile(bpmnKey: string): Promise<void> {
-    if (!this.state.config) return;
-
-    try {
-      const result = await client.openBpmnFile(this.state.configPath, bpmnKey);
-
-      console.log("Opening BPMN file:", bpmnKey, result);
-
-      this.props.displayNotification({
-        type: "success",
-        title: "Opening BPMN file",
-        content: result.message,
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Error opening BPMN file:", error);
-      this.props.displayNotification({
-        type: "error",
-        title: "Error opening BPMN file",
-        content: "Could not open BPMN file",
-        duration: 5000,
-      });
     }
   }
 
@@ -280,19 +254,6 @@ export class FlowStudioPlugin extends PureComponent<
               { onClick: () => this.saveSettings() },
               "Save Settings"
             ),
-            this.state.config?.processes &&
-              createElement(
-                "button",
-                {
-                  onClick: () => {
-                    const firstProcess = Object.keys(
-                      this.state.config!.processes!
-                    )[0];
-                    this.testOpenFile(firstProcess);
-                  },
-                },
-                "Test Open First Process"
-              ),
             createElement(
               "button",
               { onClick: () => this.handleConfigClosed(null) },

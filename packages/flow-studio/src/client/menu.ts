@@ -2,7 +2,7 @@ import { initServer } from "../server";
 
 export default (electronApp: any) => [
   {
-    label: "Flow Studio",
+    label: "Open Flow Studio",
     accelerator: "CommandOrControl+1",
     enabled: () => true,
     action: () => {
