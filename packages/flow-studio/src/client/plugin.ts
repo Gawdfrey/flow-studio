@@ -23,6 +23,7 @@ export class FlowStudioPlugin extends PureComponent<
   FlowStudioState
 > {
   constructor(props: CamundaPluginProps) {
+    console.log("🎯 FlowStudioPlugin constructor called with props:", props);
     super(props);
 
     this.state = defaultState;
@@ -32,6 +33,7 @@ export class FlowStudioPlugin extends PureComponent<
     this.loadConfig = this.loadConfig.bind(this);
     this.testOpenFile = this.testOpenFile.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
+    this.setupElementEventHandlers = this.setupElementEventHandlers.bind(this);
   }
 
   componentDidMount() {
@@ -58,12 +60,47 @@ export class FlowStudioPlugin extends PureComponent<
       }
     );
 
-    this.props.subscribe("element.dblclick", this.handleCallActivity);
+    // Subscribe to tab changes to set up event handlers when a tab becomes active
+    this.props.subscribe("bpmn.modeler.created", (event: any) => {
+      this.setupElementEventHandlers(event.modeler);
+    });
 
     // retrieve plugin related information from the application configuration
     config
       .getForPlugin("flowStudio", "config")
       .then((config: any) => this.setState(config));
+  }
+
+  setupElementEventHandlers(modeler: any): void {
+    try {
+      const elementRegistry = modeler.get("elementRegistry");
+      const eventBus = modeler.get("eventBus");
+
+      if (!elementRegistry || !eventBus) {
+        console.log("Missing required services, skipping event handler setup");
+        return;
+      }
+
+      eventBus.once("import.done", () => {
+        console.log("Import done, retrying element setup...");
+        setTimeout(() => this.setupElementEventHandlers(modeler), 100);
+      });
+
+      // Use eventBus to listen for all double-click events
+      eventBus.on("element.dblclick", (event: any) => {
+        const { element } = event;
+        console.log(
+          `EventBus double-click on element: ${element.id}, type: ${element.type}`
+        );
+
+        if (element.type === "bpmn:CallActivity") {
+          console.log(`Double-click on call activity: ${element.id}`);
+          this.handleCallActivity({ element });
+        }
+      });
+    } catch (error) {
+      console.error("Error setting up element event handlers:", error);
+    }
   }
 
   async loadConfig(): Promise<void> {
@@ -81,32 +118,18 @@ export class FlowStudioPlugin extends PureComponent<
 
   async handleCallActivity(event: CamundaEvent): Promise<void> {
     const { element } = event;
-
-    // Check if this is a call activity
-    if (element.type === "bpmn:CallActivity") {
-      const calledElement = element.businessObject.calledElement;
-
-      if (calledElement && this.state.config) {
-        try {
-          await client.openBpmnFile(this.state.configPath, calledElement);
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          this.props.displayNotification({
-            type: "error",
-            title: "Error opening process",
-            content: `Could not open process "${calledElement}": ${errorMessage}`,
-            duration: 5000,
-          });
-        }
-      } else if (element.type === "bpmn:CallActivity" && !calledElement) {
-        // Show helpful message for call activities without calledElement
+    const calledElement = element.businessObject.calledElement;
+    if (calledElement && this.state.config) {
+      try {
+        await client.openBpmnFile(this.state.configPath, calledElement);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
         this.props.displayNotification({
-          type: "warning",
-          title: "Call Activity Configuration",
-          content:
-            "This call activity doesn't have a 'Called Element' configured",
-          duration: 4000,
+          type: "error",
+          title: "Error opening process",
+          content: `Could not open process "${calledElement}": ${errorMessage}`,
+          duration: 5000,
         });
       }
     }

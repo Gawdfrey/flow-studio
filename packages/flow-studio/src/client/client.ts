@@ -140,7 +140,11 @@ export async function openBpmnFile(
 
   const opId = `open-${Date.now()}`;
 
-  const promise = new Promise<{ success: boolean; filePath: string; message: string }>((resolve, reject) => {
+  const promise = new Promise<{
+    success: boolean;
+    filePath: string;
+    message: string;
+  }>((resolve, reject) => {
     awaitResponses.push({
       ref: opId,
       time: Date.now(),

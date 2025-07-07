@@ -54,85 +54,6 @@ const operations = {
     }
   },
 
-  getBpmnFile: async (ws: WebSocket, data: any) => {
-    try {
-      const { configPath, bpmnKey } = data;
-
-      if (!configPath || !bpmnKey) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            ref: data.ref,
-            message: "configPath and bpmnKey are required",
-          })
-        );
-        return;
-      }
-
-      const configContent = readFileSync(configPath, "utf8");
-      const config: ConfigFile = JSON.parse(configContent);
-
-      if (!config.processes) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            ref: data.ref,
-            message: "No processes found in config",
-          })
-        );
-        return;
-      }
-
-      const bpmnFilePath = config.processes[bpmnKey];
-      if (!bpmnFilePath) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            ref: data.ref,
-            message: `Process not found: ${bpmnKey}`,
-          })
-        );
-        return;
-      }
-
-      // Files are relative to config location
-      const configDir = require("path").dirname(configPath);
-      const fullPath = join(configDir, bpmnFilePath);
-
-      if (!existsSync(fullPath)) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            ref: data.ref,
-            message: `BPMN file not found: ${fullPath}`,
-          })
-        );
-        return;
-      }
-
-      const bpmnContent = readFileSync(fullPath, "utf8");
-
-      ws.send(
-        JSON.stringify({
-          type: "response",
-          ref: data.ref,
-          data: {
-            bpmnContent,
-            filePath: fullPath,
-          },
-        })
-      );
-    } catch (error) {
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          ref: data.ref,
-          message: `Error reading BPMN file: ${error}`,
-        })
-      );
-    }
-  },
-
   openBpmnFile: async (ws: WebSocket, data: any) => {
     try {
       const { configPath, bpmnKey } = data;
@@ -174,6 +95,7 @@ const operations = {
       }
 
       const bpmnFilePath = config.processes[bpmnKey];
+      const filename = `${bpmnKey}.bpmn`;
       if (!bpmnFilePath) {
         ws.send(
           JSON.stringify({
@@ -187,7 +109,7 @@ const operations = {
 
       // Files are relative to config location
       const configDir = require("path").dirname(configPath);
-      const fullPath = join(configDir, bpmnFilePath);
+      const fullPath = join(configDir, bpmnFilePath, "diagrams", filename);
 
       if (!existsSync(fullPath)) {
         ws.send(
